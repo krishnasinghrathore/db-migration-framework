@@ -429,8 +429,25 @@ export class VerticaAdapter extends DatabaseAdapter {
   async getRowCount(tableName: string, schema: string = 'public'): Promise<number> {
     const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
     const query = `SELECT COUNT(*) as count FROM ${fullTableName}`;
+
+    console.log(`🔍 Executing count query: ${query}`);
     const result = await this.executeQuery(query);
-    const count = result.rows[0]?.count;
+    console.log(`🔍 Query result:`, JSON.stringify(result, null, 2));
+
+    if (!result.rows || result.rows.length === 0) {
+      console.warn('⚠️  No rows returned from count query');
+      return 0;
+    }
+
+    const firstRow = result.rows[0];
+    console.log(`🔍 First row:`, JSON.stringify(firstRow, null, 2));
+    console.log(`🔍 Available keys:`, Object.keys(firstRow || {}));
+
+    // Try different possible column names
+    const count =
+      firstRow?.count || firstRow?.COUNT || firstRow?.Count || firstRow?.['COUNT(*)'] || firstRow?.['count(*)'];
+
+    console.log(`🔍 Extracted count value:`, count, `(type: ${typeof count})`);
 
     // Handle different return types from Vertica driver
     if (typeof count === 'number') {
