@@ -430,7 +430,20 @@ export class VerticaAdapter extends DatabaseAdapter {
     const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
     const query = `SELECT COUNT(*) as count FROM ${fullTableName}`;
     const result = await this.executeQuery(query);
-    return parseInt(result.rows[0].count);
+    const count = result.rows[0]?.count;
+
+    // Handle different return types from Vertica driver
+    if (typeof count === 'number') {
+      return count;
+    } else if (typeof count === 'string') {
+      const parsed = parseInt(count, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    } else if (typeof count === 'bigint') {
+      return Number(count);
+    }
+
+    console.warn('⚠️  Unexpected count type:', typeof count, count);
+    return 0;
   }
 
   getDataTypeMapping(): DataTypeMapping[] {
