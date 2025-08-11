@@ -167,13 +167,20 @@ export class VerticaAdapter extends DatabaseAdapter {
 
   async getTables(schema: string = 'public'): Promise<string[]> {
     const query = `
-      SELECT table_name 
-      FROM v_catalog.tables 
+      SELECT table_name
+      FROM v_catalog.tables
       WHERE table_schema = ? AND table_type = 'TABLE'
       ORDER BY table_name
     `;
     const result = await this.executeQuery(query, [schema]);
-    return result.rows.map((row) => row.table_name);
+
+    // Handle both array and object row formats
+    return result.rows.map((row) => {
+      if (Array.isArray(row)) {
+        return row[0]; // table_name is the first column
+      }
+      return row.table_name;
+    });
   }
 
   async getTableSchema(tableName: string, schema: string = 'public'): Promise<TableSchema> {
@@ -376,8 +383,32 @@ export class VerticaAdapter extends DatabaseAdapter {
 
   async getBatchData(tableName: string, offset: number, limit: number, schema: string = 'public'): Promise<any[]> {
     const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
+
+    // First, get column names for this table
+    const columnsQuery = `
+      SELECT column_name
+      FROM v_catalog.columns
+      WHERE table_schema = ? AND table_name = ?
+      ORDER BY ordinal_position
+    `;
+    const columnsResult = await this.executeQuery(columnsQuery, [schema, tableName]);
+    const columnNames = columnsResult.rows.map((row) => (Array.isArray(row) ? row[0] : row.column_name));
+
+    // Now get the data
     const query = `SELECT * FROM ${fullTableName} LIMIT ${limit} OFFSET ${offset}`;
     const result = await this.executeQuery(query);
+
+    // Convert array rows to objects if needed
+    if (result.rows.length > 0 && Array.isArray(result.rows[0])) {
+      return result.rows.map((row) => {
+        const obj: any = {};
+        columnNames.forEach((colName, index) => {
+          obj[colName] = row[index];
+        });
+        return obj;
+      });
+    }
+
     return result.rows;
   }
 
@@ -447,27 +478,30 @@ export class VerticaAdapter extends DatabaseAdapter {
 
       const firstRow = result.rows[0];
       console.log(`🔍 [getRowCount] First row:`, JSON.stringify(firstRow, null, 2));
-      console.log(`🔍 [getRowCount] Available keys:`, Object.keys(firstRow || {}));
 
-      // Extract count value from the first column
-      if (!firstRow || typeof firstRow !== 'object') {
+      // Handle both array and object formats from Vertica driver
+      let countValue: any;
+
+      if (Array.isArray(firstRow)) {
+        // Vertica returns rows as arrays
+        console.log(`🔍 [getRowCount] Row is an array with ${firstRow.length} elements`);
+        countValue = firstRow[0]; // COUNT(*) is the first column
+      } else if (firstRow && typeof firstRow === 'object') {
+        // Handle object format
+        console.log(`🔍 [getRowCount] Row is an object with keys:`, Object.keys(firstRow));
+        const keys = Object.keys(firstRow);
+        if (keys.length === 0) {
+          console.warn('⚠️  [getRowCount] No columns returned from count query');
+          return 0;
+        }
+        const countKey = keys[0];
+        countValue = firstRow[countKey as keyof typeof firstRow];
+      } else {
         console.warn('⚠️  [getRowCount] Invalid row structure returned from count query');
         return 0;
       }
 
-      const keys = Object.keys(firstRow);
-      if (keys.length === 0) {
-        console.warn('⚠️  [getRowCount] No columns returned from count query');
-        return 0;
-      }
-
-      const countKey = keys[0];
-      const countValue = firstRow[countKey as keyof typeof firstRow];
-      console.log(
-        `🔍 [getRowCount] Extracted count value from key '${countKey}':`,
-        countValue,
-        `(type: ${typeof countValue})`
-      );
+      console.log(`🔍 [getRowCount] Extracted count value:`, countValue, `(type: ${typeof countValue})`);
 
       // Handle different return types from Vertica driver
       if (typeof countValue === 'number') {
