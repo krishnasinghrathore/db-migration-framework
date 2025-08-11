@@ -18,7 +18,14 @@
     "migrate:list": "tsx src/cli/cli.ts list-tables",
     "migrate:validate": "tsx src/cli/cli.ts validate",
     "migrate:all": "tsx src/cli/cli.ts migrate-all",
-    "migrate:table": "tsx src/cli/cli.ts migrate-table"
+    "migrate:table": "tsx src/cli/cli.ts migrate-table",
+    "migrate:collections": "tsx src/cli/cli.ts migrate-table --table COLLECTIONS",
+    "migrate:modules": "tsx src/cli/cli.ts migrate-table --table MODULES",
+    "migrate:roles": "tsx src/cli/cli.ts migrate-table --table ROLES",
+    "migrate:category": "tsx src/cli/cli.ts migrate-table --table CATEGORY",
+    "migrate:camera": "tsx src/cli/cli.ts migrate-table --table CAMERA",
+    "migrate:camera-collections": "tsx src/cli/cli.ts migrate-table --table CAMERA_COLLECTION_MAP",
+    "migrate:camera-modules": "tsx src/cli/cli.ts migrate-table --table CAMERA_MODULE_MAP"
   },
   "keywords": [
     "database",
