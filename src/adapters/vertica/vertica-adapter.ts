@@ -15,11 +15,22 @@ import {
 let vertica: any;
 try {
   vertica = require('vertica');
+  console.log('✅ Vertica driver loaded successfully');
 } catch (error) {
+  console.warn('⚠️  Vertica driver not available, using mock implementation');
+  console.warn('⚠️  Install vertica package: npm install vertica');
+  console.warn('⚠️  Mock data will be used instead of real Vertica data!');
+
   // Mock implementation for development/testing
   vertica = {
     connect: (config: any, callback: (err: any, connection?: any) => void) => {
       console.log('🔧 Mock Vertica connection - using sample data');
+      console.log('🔧 Connection config:', {
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.user,
+      });
       const mockConnection = {
         connect: (cb: (err: any) => void) => {
           setTimeout(() => cb(null), 100);
@@ -31,14 +42,21 @@ try {
           const cb = typeof paramsOrCallback === 'function' ? paramsOrCallback : callback;
           const params = typeof paramsOrCallback === 'function' ? [] : paramsOrCallback;
 
+          console.log(`🔍 Mock Vertica query: ${sql.substring(0, 50)}...`);
+          if (params && params.length > 0) {
+            console.log(`🔍 Mock Vertica params:`, params.slice(0, 3));
+          }
+
           // Mock responses for common queries
           setTimeout(() => {
             if (sql.includes('COUNT(*)')) {
+              console.log('⚠️  MOCK COUNT - Using sample count of 1000');
               cb(null, { rows: [{ count: '1000' }], rowCount: 1 });
             } else if (sql.includes('SELECT 1')) {
               cb(null, { rows: [{ test: 1 }], rowCount: 1 });
             } else if (sql.includes('SELECT *')) {
               // Mock table data
+              console.log('⚠️  MOCK SELECT - Using sample data instead of real Vertica data!');
               const mockData = Array.from({ length: 10 }, (_, i) => ({
                 id: i + 1,
                 name: `Sample Record ${i + 1}`,
@@ -434,7 +452,7 @@ export class VerticaAdapter extends DatabaseAdapter {
     return mapping ? mapping.targetType : sourceType;
   }
 
-  transformValue(value: any, sourceType: string, targetType: string): any {
+  transformValue(value: any, sourceType: string, _targetType: string): any {
     // Vertica-specific value transformations
     if (value === null || value === undefined) {
       return null;

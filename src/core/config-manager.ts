@@ -97,7 +97,10 @@ export class ConfigManager {
 
   async loadConfig(): Promise<MigrationConfig> {
     try {
-      const configContent = await fs.promises.readFile(this.configPath, 'utf-8');
+      let configContent = await fs.promises.readFile(this.configPath, 'utf-8');
+
+      // Resolve environment variables in the config content
+      configContent = this.resolveEnvironmentVariables(configContent);
 
       if (this.configPath.endsWith('.yaml') || this.configPath.endsWith('.yml')) {
         this.config = yaml.parse(configContent) as MigrationConfig;
@@ -270,7 +273,7 @@ export class ConfigManager {
   async createDefaultConfig(
     sourceDatabaseType: string,
     targetDatabaseType: string,
-    outputPath: string
+    _outputPath: string
   ): Promise<MigrationConfig> {
     const defaultConfig: MigrationConfig = {
       migration: {
@@ -368,6 +371,17 @@ export class ConfigManager {
   resolveConnectionString(connectionString: string): string {
     return connectionString.replace(/\$\{([^}]+)\}/g, (match, varName) => {
       return process.env[varName] || match;
+    });
+  }
+
+  private resolveEnvironmentVariables(content: string): string {
+    return content.replace(/\$\{([^}]+)\}/g, (match, varName) => {
+      const envValue = process.env[varName];
+      if (envValue === undefined) {
+        console.warn(`Warning: Environment variable ${varName} is not set, using placeholder`);
+        return match;
+      }
+      return envValue;
     });
   }
 }

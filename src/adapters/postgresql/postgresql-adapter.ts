@@ -3,22 +3,37 @@ let Pool: any;
 try {
   const pg = require('pg');
   Pool = pg.Pool;
+  console.log('✅ PostgreSQL driver loaded successfully');
 } catch (error) {
+  console.warn('⚠️  PostgreSQL driver not available, using mock implementation');
+  console.warn('⚠️  Install pg package: npm install pg');
+  console.warn('⚠️  No actual data will be inserted into PostgreSQL!');
+
   // Mock implementation for development/testing
   Pool = class {
     constructor(config: any) {
       console.log('🔧 Mock PostgreSQL connection - using sample responses');
+      console.log('🔧 Connection config:', {
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.user,
+      });
     }
     async connect(): Promise<any> {
       return {
         query: async (text: string, params?: any[]) => {
           console.log(`🔍 Mock PostgreSQL query: ${text.substring(0, 50)}...`);
+          if (params && params.length > 0) {
+            console.log(`🔍 Mock PostgreSQL params:`, params.slice(0, 3));
+          }
           // Mock responses for common queries
           if (text.includes('SELECT 1')) {
             return { rows: [{ test: 1 }], rowCount: 1 };
           } else if (text.includes('COUNT(*)')) {
             return { rows: [{ count: '500' }], rowCount: 1 };
           } else if (text.includes('INSERT INTO')) {
+            console.log('⚠️  MOCK INSERT - No actual data inserted into PostgreSQL!');
             return { rows: [], rowCount: 1 };
           } else if (text.includes('BEGIN') || text.includes('COMMIT') || text.includes('ROLLBACK')) {
             return { rows: [], rowCount: 0 };
@@ -358,7 +373,6 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
 
     try {
       const columns = Object.keys(data[0]);
-      const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
       const query = this.buildInsertQuery(tableName, columns, schema);
 
       if (!this.client) {
@@ -423,7 +437,7 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
     return mapping ? mapping.targetType : sourceType;
   }
 
-  transformValue(value: any, sourceType: string, targetType: string): any {
+  transformValue(value: any, _sourceType: string, targetType: string): any {
     // PostgreSQL-specific value transformations
     if (value === null || value === undefined) {
       return null;

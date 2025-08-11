@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
+import { config } from 'dotenv';
 import { Command } from 'commander';
 import { ConfigManager } from '../core/config-manager.js';
 import { VerticaAdapter } from '../adapters/vertica/vertica-adapter.js';
 import { PostgreSQLAdapter } from '../adapters/postgresql/postgresql-adapter.js';
+
+// Load environment variables from .env file
+config();
 
 const program = new Command();
 
@@ -192,7 +196,7 @@ program
   .command('list-tables')
   .description('List all available tables for migration')
   .option('-c, --config <path>', 'Configuration file path', 'config/migrations/vertica-to-postgresql.yaml')
-  .action(async (options) => {
+  .action(async (_options) => {
     console.log('📋 Available tables for migration:\n');
 
     Object.entries(TABLE_MAPPINGS).forEach(([source, target], index) => {
