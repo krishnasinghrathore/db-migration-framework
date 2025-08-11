@@ -178,12 +178,14 @@ async function migrateTable(
 
         for (const [sourceCol, value] of Object.entries(row)) {
           const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
+          console.log(`🔍 Processing column: ${sourceCol} -> ${targetCol}`);
 
           // Skip columns that don't exist in the target table
           if (!targetColumnNames.has(targetCol)) {
             console.log(`⚠️  Skipping column '${sourceCol}' -> '${targetCol}' (not found in target table)`);
             continue;
           }
+          console.log(`✅ Including column '${sourceCol}' -> '${targetCol}' (found in target table)`);
 
           // Transform specific data types
           if (value !== null && value !== undefined) {
@@ -208,6 +210,10 @@ async function migrateTable(
 
         return newRow;
       });
+
+      // Debug: Log the transformed data structure
+      console.log(`🔍 Transformed data sample (first row):`, JSON.stringify(transformedData[0], null, 2));
+      console.log(`🔍 Target table columns: ${Array.from(targetColumnNames).join(', ')}`);
 
       // Insert batch into target
       const result = await targetAdapter.insertBatch(targetTable, transformedData, 'dpwtanbeeh');
