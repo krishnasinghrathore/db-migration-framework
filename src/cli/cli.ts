@@ -134,6 +134,12 @@ async function migrateTable(
   console.log(`\n🚀 Starting migration: ${sourceTable} → ${targetTable}`);
 
   try {
+    // Get target table schema to know which columns exist
+    console.log(`🔍 Getting target table schema for: ${targetTable}`);
+    const targetTableSchema = await targetAdapter.getTableSchema(targetTable, 'dpwtanbeeh');
+    const targetColumnNames = new Set(targetTableSchema.columns.map((col) => col.name));
+    console.log(`🔍 Target table columns: ${Array.from(targetColumnNames).join(', ')}`);
+
     // Get row count
     console.log(`🔍 Getting row count for table: ${sourceTable} in schema: DPWTANBEEH`);
 
@@ -172,6 +178,12 @@ async function migrateTable(
 
         for (const [sourceCol, value] of Object.entries(row)) {
           const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
+
+          // Skip columns that don't exist in the target table
+          if (!targetColumnNames.has(targetCol)) {
+            console.log(`⚠️  Skipping column '${sourceCol}' -> '${targetCol}' (not found in target table)`);
+            continue;
+          }
 
           // Transform specific data types
           if (value !== null && value !== undefined) {
