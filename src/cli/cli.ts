@@ -116,8 +116,9 @@ async function migrateTable(
     // Get row count
     console.log(`🔍 Getting row count for table: ${sourceTable} in schema: DPWTANBEEH`);
 
+    let totalRows: number;
     try {
-      const totalRows = await sourceAdapter.getRowCount(sourceTable, 'DPWTANBEEH');
+      totalRows = await sourceAdapter.getRowCount(sourceTable, 'DPWTANBEEH');
       console.log(`📊 Total rows to migrate: ${totalRows}`);
       console.log(`🔍 Row count type: ${typeof totalRows}, value: ${totalRows}`);
     } catch (rowCountError) {
@@ -125,8 +126,6 @@ async function migrateTable(
       console.error(`❌ Error stack:`, rowCountError instanceof Error ? rowCountError.stack : 'No stack');
       throw rowCountError;
     }
-
-    const totalRows = await sourceAdapter.getRowCount(sourceTable, 'DPWTANBEEH');
 
     if (options.dryRun) {
       console.log(`✅ Dry run completed for ${sourceTable}`);
