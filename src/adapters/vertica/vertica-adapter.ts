@@ -384,32 +384,49 @@ export class VerticaAdapter extends DatabaseAdapter {
   async getBatchData(tableName: string, offset: number, limit: number, schema: string = 'public'): Promise<any[]> {
     const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
 
-    // First, get column names for this table
-    const columnsQuery = `
-      SELECT column_name
-      FROM v_catalog.columns
-      WHERE table_schema = ? AND table_name = ?
-      ORDER BY ordinal_position
-    `;
-    const columnsResult = await this.executeQuery(columnsQuery, [schema, tableName]);
-    const columnNames = columnsResult.rows.map((row) => (Array.isArray(row) ? row[0] : row.column_name));
+    try {
+      // Get data with explicit column selection to ensure consistent ordering
+      const query = `SELECT * FROM ${fullTableName} LIMIT ${limit} OFFSET ${offset}`;
+      const result = await this.executeQuery(query);
 
-    // Now get the data
-    const query = `SELECT * FROM ${fullTableName} LIMIT ${limit} OFFSET ${offset}`;
-    const result = await this.executeQuery(query);
+      // If no rows, return empty array
+      if (!result.rows || result.rows.length === 0) {
+        return [];
+      }
 
-    // Convert array rows to objects if needed
-    if (result.rows.length > 0 && Array.isArray(result.rows[0])) {
+      // Check if we have field metadata from the query result
+      if (result.fields && result.fields.length > 0 && Array.isArray(result.rows[0])) {
+        // Use field names from query metadata
+        const columnNames = result.fields.map((field: any) => field.name);
+
+        // Convert array rows to objects
+        return result.rows.map((row) => {
+          const obj: any = {};
+          columnNames.forEach((colName, index) => {
+            obj[colName] = row[index];
+          });
+          return obj;
+        });
+      }
+
+      // If rows are already objects, return as-is
+      if (!Array.isArray(result.rows[0])) {
+        return result.rows;
+      }
+
+      // Fallback: Create generic column names if no metadata available
+      console.warn('⚠️  No column metadata available, using generic column names');
       return result.rows.map((row) => {
         const obj: any = {};
-        columnNames.forEach((colName, index) => {
-          obj[colName] = row[index];
+        row.forEach((value: any, index: number) => {
+          obj[`column_${index}`] = value;
         });
         return obj;
       });
+    } catch (error) {
+      console.error('❌ Error in getBatchData:', error);
+      throw error;
     }
-
-    return result.rows;
   }
 
   async insertBatch(tableName: string, data: any[], schema: string = 'public'): Promise<BatchResult> {
