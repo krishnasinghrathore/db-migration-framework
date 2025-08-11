@@ -122,6 +122,22 @@ const COLUMN_MAPPINGS: { [key: string]: { [key: string]: string } } = {
     MODIFIED_DATE: 'updated_at',
     END_POINT_NAME: 'end_point_name',
   },
+  CATEGORY: {
+    CATEGORY_ID: 'id',
+    SHORT_CODE: 'code',
+    NAME: 'name',
+    DESCRIPTION: 'description',
+    SORT_ORDER: 'sort_order',
+    PARENT_ID: 'parent_id',
+    IS_VALID: 'is_valid',
+    BIZ_CODE: 'biz_code',
+    RGN_CODE: 'rgn_code',
+    SRC_SYS: 'src_sys',
+    CREATED_BY: 'created_by',
+    CREATED_DATE: 'created_date',
+    MODIFIED_BY: 'modified_by',
+    MODIFIED_DATE: 'modified_date',
+  },
 };
 
 async function migrateTable(
@@ -218,6 +234,9 @@ async function migrateTable(
             } else if (targetCol === 'updated_at' || targetCol.includes('_at')) {
               // For other timestamp columns with NOT NULL constraints, use current timestamp as fallback
               newRow[targetCol] = new Date();
+            } else if (targetCol === 'code' && sourceTable === 'CATEGORY') {
+              // For code column in CATEGORY table, use a default value if null
+              newRow[targetCol] = 'UNKNOWN';
             } else {
               newRow[targetCol] = null;
             }
