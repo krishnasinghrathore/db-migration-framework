@@ -1,38 +1,6 @@
-// Note: Install required packages: npm install yaml @types/node
-// import * as fs from 'fs';
-// import * as path from 'path';
-// import * as yaml from 'yaml';
-
-// Temporary placeholders until packages are installed
-const fs = {
-  promises: {
-    readFile: async (path: string, encoding: string) => {
-      throw new Error('fs module not available. Install @types/node');
-    },
-    writeFile: async (path: string, content: string, encoding: string) => {
-      throw new Error('fs module not available. Install @types/node');
-    },
-    access: async (path: string) => {
-      throw new Error('fs module not available. Install @types/node');
-    },
-  },
-};
-
-const path = {
-  dirname: (p: string) => p,
-  resolve: (...paths: string[]) => paths.join('/'),
-  join: (...paths: string[]) => paths.join('/'),
-};
-
-const yaml = {
-  parse: (content: string) => JSON.parse(content),
-  stringify: (obj: any) => JSON.stringify(obj, null, 2),
-};
-
-// Mock process for environment variables
-const process = {
-  env: {} as { [key: string]: string | undefined },
-};
+import * as fs from 'fs';
+import * as path from 'path';
+import * as yaml from 'yaml';
 
 export interface MigrationConfig {
   migration: {
