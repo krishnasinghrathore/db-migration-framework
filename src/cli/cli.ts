@@ -199,7 +199,7 @@ program
       console.log(`${(index + 1).toString().padStart(2)}. ${source.padEnd(25)} -> ${target}`);
     });
 
-    console.log(`\n💡 Use: npm run migrate -- migrate-table --table <table_name>`);
+    console.log(`\n💡 Use: npm run migrate:table -- --table <table_name>`);
   });
 
 program
