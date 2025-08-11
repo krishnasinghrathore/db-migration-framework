@@ -184,8 +184,16 @@ async function migrateTable(
         console.log(`✅ Migrated ${result.processedRows} rows (Total: ${migratedRows}/${totalRows})`);
       } else {
         console.error(`❌ Batch failed: ${result.errors.length} errors`);
-        if (options.verbose) {
-          result.errors.forEach((error) => console.error(`   - ${error.message}`));
+        // Always show first few errors to help debugging
+        const errorsToShow = options.verbose ? result.errors : result.errors.slice(0, 3);
+        errorsToShow.forEach((error, index) => {
+          console.error(`   Error ${index + 1}: ${error.message}`);
+          if (options.verbose && error.stack) {
+            console.error(`   Stack: ${error.stack}`);
+          }
+        });
+        if (!options.verbose && result.errors.length > 3) {
+          console.error(`   ... and ${result.errors.length - 3} more errors. Use --verbose to see all.`);
         }
       }
 
