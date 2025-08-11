@@ -115,9 +115,18 @@ async function migrateTable(
   try {
     // Get row count
     console.log(`🔍 Getting row count for table: ${sourceTable} in schema: DPWTANBEEH`);
+
+    try {
+      const totalRows = await sourceAdapter.getRowCount(sourceTable, 'DPWTANBEEH');
+      console.log(`📊 Total rows to migrate: ${totalRows}`);
+      console.log(`🔍 Row count type: ${typeof totalRows}, value: ${totalRows}`);
+    } catch (rowCountError) {
+      console.error(`❌ Exception in getRowCount:`, rowCountError);
+      console.error(`❌ Error stack:`, rowCountError instanceof Error ? rowCountError.stack : 'No stack');
+      throw rowCountError;
+    }
+
     const totalRows = await sourceAdapter.getRowCount(sourceTable, 'DPWTANBEEH');
-    console.log(`📊 Total rows to migrate: ${totalRows}`);
-    console.log(`🔍 Row count type: ${typeof totalRows}, value: ${totalRows}`);
 
     if (options.dryRun) {
       console.log(`✅ Dry run completed for ${sourceTable}`);
