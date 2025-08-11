@@ -4,20 +4,20 @@ migration:
 
   source:
     type: 'vertica'
-    host: 'localhost'
-    port: 5433
-    database: 'source_db'
+    host: '${VERTICA_HOST}'
+    port: '${VERTICA_PORT}'
+    database: '${VERTICA_DATABASE}'
     username: '${VERTICA_USERNAME}'
     password: '${VERTICA_PASSWORD}'
     ssl: false
     schema_path: 'schemas/source/vertica'
-    default_schema: 'public'
+    default_schema: 'DPWTANBEEH'
 
   target:
     type: 'postgresql'
-    host: 'localhost'
-    port: 5432
-    database: 'target_db'
+    host: '${POSTGRES_HOST}'
+    port: '${POSTGRES_PORT}'
+    database: '${POSTGRES_DATABASE}'
     username: '${POSTGRES_USERNAME}'
     password: '${POSTGRES_PASSWORD}'
     ssl: false
