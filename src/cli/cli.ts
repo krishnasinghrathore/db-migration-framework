@@ -139,6 +139,144 @@ const COLUMN_MAPPINGS: { [key: string]: { [key: string]: string } } = {
     MODIFIED_DATE: 'modified_date',
   },
 };
+// Helper function to sort categories hierarchically (parents before children)
+function sortCategoriesHierarchically(categories: any[]): any[] {
+  // Create a map of id to category for quick lookup
+  const categoryMap = new Map<number, any>();
+  categories.forEach((category) => {
+    categoryMap.set(category.id, category);
+  });
+
+  // Separate root categories (parent_id is null) from child categories
+  const rootCategories: any[] = [];
+  const childCategories: any[] = [];
+
+  categories.forEach((category) => {
+    if (category.parent_id === null || category.parent_id === undefined) {
+      rootCategories.push(category);
+    } else {
+      childCategories.push(category);
+    }
+  });
+
+  // Sort child categories by parent_id to ensure parents are processed first
+  childCategories.sort((a, b) => {
+    // If a's parent is b, then a should come after b
+    if (a.parent_id === b.id) return 1;
+    // If b's parent is a, then b should come after a
+    if (b.parent_id === a.id) return -1;
+    // Otherwise, sort by parent_id
+    return a.parent_id - b.parent_id;
+  });
+
+  // Combine root categories with sorted child categories
+  return [...rootCategories, ...childCategories];
+}
+// Specialized function to migrate CATEGORY table with hierarchical sorting
+async function migrateCategoryTable(
+  sourceAdapter: VerticaAdapter,
+  targetAdapter: PostgreSQLAdapter,
+  sourceTable: string,
+  targetTable: string,
+  targetColumnNames: Set<string>,
+  options: MigrationOptions,
+  totalRows: number
+) {
+  console.log(`📦 Processing all ${totalRows} rows for hierarchical sorting`);
+
+  // Get all data from source
+  const sourceData = await sourceAdapter.getBatchData(sourceTable, 0, totalRows, 'DPWTANBEEH');
+
+  // Transform data based on column mappings
+  const transformedData = sourceData.map((row) => {
+    const newRow: any = {};
+    const columnMapping = COLUMN_MAPPINGS[sourceTable] || {};
+
+    for (const [sourceCol, value] of Object.entries(row)) {
+      const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
+      console.log(`🔍 Processing column: ${sourceCol} -> ${targetCol}`);
+
+      // Skip columns that don't exist in the target table
+      if (!targetColumnNames.has(targetCol)) {
+        console.log(`⚠️  Skipping column '${sourceCol}' -> '${targetCol}' (not found in target table)`);
+        continue;
+      }
+      console.log(`✅ Including column '${sourceCol}' -> '${targetCol}' (found in target table)`);
+
+      // Transform specific data types
+      if (value !== null && value !== undefined) {
+        // Convert IS_VALID (0/1) to boolean
+        if (targetCol === 'is_valid' && typeof value === 'number') {
+          newRow[targetCol] = value === 1;
+        }
+        // Convert timestamps
+        else if (targetCol.includes('_at') || targetCol.includes('_date')) {
+          newRow[targetCol] = value instanceof Date ? value : new Date(value as string | number);
+        }
+        // Convert streaming boolean
+        else if (targetCol === 'streaming' && typeof value === 'number') {
+          newRow[targetCol] = value === 1;
+        } else {
+          newRow[targetCol] = value;
+        }
+      } else {
+        // Handle null values for timestamp columns with NOT NULL constraints
+        if ((targetCol === 'updated_at' || targetCol === 'modified_date') && targetColumnNames.has('created_at')) {
+          // For updated_at columns, use created_at as fallback if available, otherwise use current timestamp
+          const createdAtValue =
+            row[columnMapping['CREATED_DATE'] || 'CREATED_DATE'] || row['CREATED_DATE'] || row['created_date'];
+          if (createdAtValue !== null && createdAtValue !== undefined) {
+            newRow[targetCol] =
+              createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string | number);
+          } else {
+            newRow[targetCol] = new Date();
+          }
+        } else if (targetCol === 'updated_at' || targetCol.includes('_at')) {
+          // For other timestamp columns with NOT NULL constraints, use current timestamp as fallback
+          newRow[targetCol] = new Date();
+        } else if (targetCol === 'code' && sourceTable === 'CATEGORY') {
+          // For code column in CATEGORY table, use a default value if null
+          newRow[targetCol] = 'UNKNOWN';
+        } else {
+          newRow[targetCol] = null;
+        }
+      }
+    }
+
+    return newRow;
+  });
+
+  // Sort data to ensure parents are inserted before children
+  console.log(`📦 Sorting ${transformedData.length} rows for hierarchical order`);
+  const sortedData = sortCategoriesHierarchically(transformedData);
+
+  // Debug: Log the transformed data structure
+  console.log(`🔍 Transformed data sample (first row):`, JSON.stringify(sortedData[0], null, 2));
+  console.log(`🔍 Target table columns: ${Array.from(targetColumnNames).join(', ')}`);
+
+  // Insert all data at once
+  console.log(`📦 Inserting all ${sortedData.length} rows`);
+  const result = await targetAdapter.insertBatch(targetTable, sortedData, 'dpwtanbeeh');
+
+  if (result.success) {
+    console.log(`✅ Migrated ${result.processedRows} rows (Total: ${result.processedRows}/${totalRows})`);
+    return result.processedRows;
+  } else {
+    console.error(`❌ Batch failed: ${result.errors.length} errors`);
+    // Always show first few errors to help debugging
+    const errorsToShow = options.verbose ? result.errors : result.errors.slice(0, 3);
+    errorsToShow.forEach((error, index) => {
+      console.error(`   Error ${index + 1}: ${error.message}`);
+      if (options.verbose && error.stack) {
+        console.error(`   Stack: ${error.stack}`);
+      }
+    });
+    if (!options.verbose && result.errors.length > 3) {
+      console.error(`   ... and ${result.errors.length - 3} more errors. Use --verbose to see all.`);
+    }
+    return 0;
+  }
+}
 
 async function migrateTable(
   sourceAdapter: VerticaAdapter,
@@ -175,103 +313,119 @@ async function migrateTable(
       return;
     }
 
-    const batchSize = options.batchSize || 1000;
-    let offset = 0;
     let migratedRows = 0;
+    // Special handling for CATEGORY table to sort hierarchical data
+    if (sourceTable === 'CATEGORY') {
+      migratedRows = await migrateCategoryTable(
+        sourceAdapter,
+        targetAdapter,
+        sourceTable,
+        targetTable,
+        targetColumnNames,
+        options,
+        totalRows
+      );
+    } else {
+      const batchSize = options.batchSize || 1000;
+      let offset = 0;
 
-    while (offset < totalRows) {
-      console.log(`📦 Processing batch: ${offset + 1} - ${Math.min(offset + batchSize, totalRows)}`);
+      while (offset < totalRows) {
+        console.log(`📦 Processing batch: ${offset + 1} - ${Math.min(offset + batchSize, totalRows)}`);
 
-      // Get batch data from source
-      const sourceData = await sourceAdapter.getBatchData(sourceTable, offset, batchSize, 'DPWTANBEEH');
+        // Get batch data from source
+        const sourceData = await sourceAdapter.getBatchData(sourceTable, offset, batchSize, 'DPWTANBEEH');
 
-      if (sourceData.length === 0) break;
+        if (sourceData.length === 0) break;
 
-      // Transform data based on column mappings
-      const transformedData = sourceData.map((row) => {
-        const newRow: any = {};
-        const columnMapping = COLUMN_MAPPINGS[sourceTable] || {};
+        // Transform data based on column mappings
+        const transformedData = sourceData.map((row) => {
+          const newRow: any = {};
+          const columnMapping = COLUMN_MAPPINGS[sourceTable] || {};
 
-        for (const [sourceCol, value] of Object.entries(row)) {
-          const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
-          console.log(`🔍 Processing column: ${sourceCol} -> ${targetCol}`);
+          for (const [sourceCol, value] of Object.entries(row)) {
+            const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
+            console.log(`🔍 Processing column: ${sourceCol} -> ${targetCol}`);
 
-          // Skip columns that don't exist in the target table
-          if (!targetColumnNames.has(targetCol)) {
-            console.log(`⚠️  Skipping column '${sourceCol}' -> '${targetCol}' (not found in target table)`);
-            continue;
-          }
-          console.log(`✅ Including column '${sourceCol}' -> '${targetCol}' (found in target table)`);
-
-          // Transform specific data types
-          if (value !== null && value !== undefined) {
-            // Convert IS_VALID (0/1) to boolean
-            if (targetCol === 'is_valid' && typeof value === 'number') {
-              newRow[targetCol] = value === 1;
+            // Skip columns that don't exist in the target table
+            if (!targetColumnNames.has(targetCol)) {
+              console.log(`⚠️  Skipping column '${sourceCol}' -> '${targetCol}' (not found in target table)`);
+              continue;
             }
-            // Convert timestamps
-            else if (targetCol.includes('_at') || targetCol.includes('_date')) {
-              newRow[targetCol] = value instanceof Date ? value : new Date(value as string | number);
-            }
-            // Convert streaming boolean
-            else if (targetCol === 'streaming' && typeof value === 'number') {
-              newRow[targetCol] = value === 1;
-            } else {
-              newRow[targetCol] = value;
-            }
-          } else {
-            // Handle null values for timestamp columns with NOT NULL constraints
-            if ((targetCol === 'updated_at' || targetCol === 'modified_date') && targetColumnNames.has('created_at')) {
-              // For updated_at columns, use created_at as fallback if available, otherwise use current timestamp
-              const createdAtValue =
-                row[columnMapping['CREATED_DATE'] || 'CREATED_DATE'] || row['CREATED_DATE'] || row['created_date'];
-              if (createdAtValue !== null && createdAtValue !== undefined) {
-                newRow[targetCol] =
-                  createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string | number);
-              } else {
-                newRow[targetCol] = new Date();
+            console.log(`✅ Including column '${sourceCol}' -> '${targetCol}' (found in target table)`);
+
+            // Transform specific data types
+            if (value !== null && value !== undefined) {
+              // Convert IS_VALID (0/1) to boolean
+              if (targetCol === 'is_valid' && typeof value === 'number') {
+                newRow[targetCol] = value === 1;
               }
-            } else if (targetCol === 'updated_at' || targetCol.includes('_at')) {
-              // For other timestamp columns with NOT NULL constraints, use current timestamp as fallback
-              newRow[targetCol] = new Date();
-            } else if (targetCol === 'code' && sourceTable === 'CATEGORY') {
-              // For code column in CATEGORY table, use a default value if null
-              newRow[targetCol] = 'UNKNOWN';
+              // Convert timestamps
+              else if (targetCol.includes('_at') || targetCol.includes('_date')) {
+                newRow[targetCol] = value instanceof Date ? value : new Date(value as string | number);
+              }
+              // Convert streaming boolean
+              else if (targetCol === 'streaming' && typeof value === 'number') {
+                newRow[targetCol] = value === 1;
+              } else {
+                newRow[targetCol] = value;
+              }
             } else {
-              newRow[targetCol] = null;
+              // Handle null values for timestamp columns with NOT NULL constraints
+              if (
+                (targetCol === 'updated_at' || targetCol === 'modified_date') &&
+                targetColumnNames.has('created_at')
+              ) {
+                // For updated_at columns, use created_at as fallback if available, otherwise use current timestamp
+                const createdAtValue =
+                  row[columnMapping['CREATED_DATE'] || 'CREATED_DATE'] || row['CREATED_DATE'] || row['created_date'];
+                if (createdAtValue !== null && createdAtValue !== undefined) {
+                  newRow[targetCol] =
+                    createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string | number);
+                } else {
+                  newRow[targetCol] = new Date();
+                }
+              } else if (targetCol === 'updated_at' || targetCol.includes('_at')) {
+                // For other timestamp columns with NOT NULL constraints, use current timestamp as fallback
+                newRow[targetCol] = new Date();
+              } else if (targetCol === 'code' && sourceTable === 'CATEGORY') {
+                // For code column in CATEGORY table, use a default value if null
+                newRow[targetCol] = 'UNKNOWN';
+              } else {
+                newRow[targetCol] = null;
+              }
             }
           }
-        }
 
-        return newRow;
-      });
-
-      // Debug: Log the transformed data structure
-      console.log(`🔍 Transformed data sample (first row):`, JSON.stringify(transformedData[0], null, 2));
-      console.log(`🔍 Target table columns: ${Array.from(targetColumnNames).join(', ')}`);
-
-      // Insert batch into target
-      const result = await targetAdapter.insertBatch(targetTable, transformedData, 'dpwtanbeeh');
-
-      if (result.success) {
-        migratedRows += result.processedRows;
-        console.log(`✅ Migrated ${result.processedRows} rows (Total: ${migratedRows}/${totalRows})`);
-      } else {
-        console.error(`❌ Batch failed: ${result.errors.length} errors`);
-        // Always show first few errors to help debugging
-        const errorsToShow = options.verbose ? result.errors : result.errors.slice(0, 3);
-        errorsToShow.forEach((error, index) => {
-          console.error(`   Error ${index + 1}: ${error.message}`);
-          if (options.verbose && error.stack) {
-            console.error(`   Stack: ${error.stack}`);
-          }
+          return newRow;
         });
-        if (!options.verbose && result.errors.length > 3) {
-          console.error(`   ... and ${result.errors.length - 3} more errors. Use --verbose to see all.`);
-        }
-      }
 
-      offset += batchSize;
+        // Debug: Log the transformed data structure
+        console.log(`🔍 Transformed data sample (first row):`, JSON.stringify(transformedData[0], null, 2));
+        console.log(`🔍 Target table columns: ${Array.from(targetColumnNames).join(', ')}`);
+
+        // Insert batch into target
+        const result = await targetAdapter.insertBatch(targetTable, transformedData, 'dpwtanbeeh');
+
+        if (result.success) {
+          migratedRows += result.processedRows;
+          console.log(`✅ Migrated ${result.processedRows} rows (Total: ${migratedRows}/${totalRows})`);
+        } else {
+          console.error(`❌ Batch failed: ${result.errors.length} errors`);
+          // Always show first few errors to help debugging
+          const errorsToShow = options.verbose ? result.errors : result.errors.slice(0, 3);
+          errorsToShow.forEach((error, index) => {
+            console.error(`   Error ${index + 1}: ${error.message}`);
+            if (options.verbose && error.stack) {
+              console.error(`   Stack: ${error.stack}`);
+            }
+          });
+          if (!options.verbose && result.errors.length > 3) {
+            console.error(`   ... and ${result.errors.length - 3} more errors. Use --verbose to see all.`);
+          }
+        }
+
+        offset += batchSize;
+      }
     }
 
     console.log(`🎉 Migration completed: ${migratedRows}/${totalRows} rows migrated`);
