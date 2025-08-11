@@ -101,6 +101,28 @@ const COLUMN_MAPPINGS: { [key: string]: { [key: string]: string } } = {
     MODIFIED_BY: 'modified_by',
     MODIFIED_DATE: 'updated_at',
   },
+  MODULES: {
+    MOD_REC_ID: 'id',
+    SHORT_CODE: 'code',
+    SERVICE_ID: 'service_id',
+    NAME: 'name',
+    DESCRIPTION: 'description',
+    TRITON_MODEL_NAME: 'triton_model_name',
+    END_POINT_HTTP_URL: 'end_point_http_url',
+    END_POINT_GRPC_URL: 'end_point_grpc_url',
+    MAX_QUEUE_SIZE: 'max_queue_size',
+    MAX_BATCH_SIZE: 'max_batch_size',
+    SORT_ORDER: 'sort_order',
+    IS_VALID: 'is_valid',
+    BIZ_CODE: 'biz_code',
+    RGN_CODE: 'rgn_code',
+    SRC_SYS: 'src_sys',
+    CREATED_BY: 'created_by',
+    CREATED_DATE: 'created_at',
+    MODIFIED_BY: 'modified_by',
+    MODIFIED_DATE: 'updated_at',
+    END_POINT_NAME: 'end_point_name',
+  },
 };
 
 async function migrateTable(
