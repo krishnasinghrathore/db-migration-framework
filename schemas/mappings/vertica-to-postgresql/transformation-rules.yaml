@@ -1,0 +1,231 @@
+transformation_rules:
+  - name: 'identity_to_serial'
+    description: 'Convert Vertica IDENTITY columns to PostgreSQL SERIAL/BIGSERIAL'
+    source_type: 'IDENTITY'
+    target_type: 'BIGSERIAL'
+    transformer: |
+      function(value) {
+        // For IDENTITY columns, PostgreSQL will auto-generate values
+        // Return null to let PostgreSQL handle the sequence
+        return null;
+      }
+    validator: |
+      function(value) {
+        // Identity values should be numeric
+        return value === null || (!isNaN(value) && Number.isInteger(Number(value)));
+      }
+
+  - name: 'identity_to_bigserial'
+    description: 'Convert Vertica IDENTITY to PostgreSQL BIGSERIAL'
+    source_type: 'IDENTITY'
+    target_type: 'BIGSERIAL'
+    transformer: |
+      function(value) {
+        return null; // Let PostgreSQL auto-generate
+      }
+    validator: |
+      function(value) {
+        return value === null || Number.isInteger(Number(value));
+      }
+
+  - name: 'varchar_preserve'
+    description: 'Preserve VARCHAR values with proper escaping'
+    source_type: 'VARCHAR'
+    target_type: 'VARCHAR'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        return String(value).trim();
+      }
+    validator: |
+      function(value) {
+        return value === null || typeof value === 'string';
+      }
+
+  - name: 'integer_preserve'
+    description: 'Preserve INTEGER values with validation'
+    source_type: 'INTEGER'
+    target_type: 'INTEGER'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        const num = Number(value);
+        return Number.isInteger(num) ? num : null;
+      }
+    validator: |
+      function(value) {
+        return value === null || Number.isInteger(Number(value));
+      }
+
+  - name: 'bigint_preserve'
+    description: 'Preserve BIGINT values with validation'
+    source_type: 'BIGINT'
+    target_type: 'BIGINT'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        const num = Number(value);
+        return Number.isInteger(num) ? num : null;
+      }
+    validator: |
+      function(value) {
+        return value === null || Number.isInteger(Number(value));
+      }
+
+  - name: 'boolean_preserve'
+    description: 'Convert various boolean representations to PostgreSQL boolean'
+    source_type: 'BOOLEAN'
+    target_type: 'BOOLEAN'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') {
+          const lower = value.toLowerCase().trim();
+          return lower === 'true' || lower === 't' || lower === '1' || lower === 'yes';
+        }
+        if (typeof value === 'number') {
+          return value !== 0;
+        }
+        return Boolean(value);
+      }
+    validator: |
+      function(value) {
+        return value === null || typeof value === 'boolean';
+      }
+
+  - name: 'timestamp_preserve'
+    description: 'Convert Vertica timestamps to PostgreSQL format'
+    source_type: 'TIMESTAMP'
+    target_type: 'TIMESTAMP'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        if (value instanceof Date) {
+          return value.toISOString().replace('T', ' ').replace('Z', '');
+        }
+        if (typeof value === 'string') {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            return date.toISOString().replace('T', ' ').replace('Z', '');
+          }
+        }
+        return value;
+      }
+    validator: |
+      function(value) {
+        if (value === null) return true;
+        const date = new Date(value);
+        return !isNaN(date.getTime());
+      }
+
+  - name: 'binary_to_bytea'
+    description: 'Convert Vertica binary data to PostgreSQL bytea format'
+    source_type: 'BINARY'
+    target_type: 'BYTEA'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'string') {
+          // Assume hex string, convert to PostgreSQL bytea format
+          return '\\x' + value.replace(/^0x/i, '');
+        }
+        if (value.constructor && value.constructor.name === 'Buffer') {
+          return '\\x' + value.toString('hex');
+        }
+        // For other binary formats, try to convert to hex
+        return '\\x' + Buffer.from(value).toString('hex');
+      }
+    validator: |
+      function(value) {
+        return value === null || typeof value === 'string' || 
+               (value && typeof value === 'object');
+      }
+
+  - name: 'preserve'
+    description: 'Default transformation that preserves the value as-is'
+    source_type: 'ANY'
+    target_type: 'ANY'
+    transformer: |
+      function(value) {
+        return value;
+      }
+    validator: |
+      function(value) {
+        return true; // Accept any value
+      }
+
+  - name: 'to_text'
+    description: 'Convert any value to text representation'
+    source_type: 'ANY'
+    target_type: 'TEXT'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        return String(value);
+      }
+    validator: |
+      function(value) {
+        return true; // Any value can be converted to text
+      }
+
+  - name: 'decimal_preserve'
+    description: 'Preserve decimal/numeric values with precision'
+    source_type: 'DECIMAL'
+    target_type: 'DECIMAL'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        const num = Number(value);
+        return isNaN(num) ? null : num;
+      }
+    validator: |
+      function(value) {
+        return value === null || !isNaN(Number(value));
+      }
+
+  - name: 'date_preserve'
+    description: 'Preserve date values'
+    source_type: 'DATE'
+    target_type: 'DATE'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        if (value instanceof Date) {
+          return value.toISOString().split('T')[0];
+        }
+        if (typeof value === 'string') {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+          }
+        }
+        return value;
+      }
+    validator: |
+      function(value) {
+        if (value === null) return true;
+        const date = new Date(value);
+        return !isNaN(date.getTime());
+      }
+
+  - name: 'time_preserve'
+    description: 'Preserve time values'
+    source_type: 'TIME'
+    target_type: 'TIME'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'string' && /^\d{2}:\d{2}:\d{2}/.test(value)) {
+          return value;
+        }
+        if (value instanceof Date) {
+          return value.toTimeString().split(' ')[0];
+        }
+        return value;
+      }
+    validator: |
+      function(value) {
+        if (value === null) return true;
+        return typeof value === 'string' && /^\d{2}:\d{2}:\d{2}/.test(value);
+      }

@@ -1,0 +1,61 @@
+tables:
+  - source_table: 'users'
+    target_table: 'users'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    where_clause: 'is_active = true'
+    order_by: 'created_date'
+
+  - source_table: 'cameras'
+    target_table: 'cameras'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'id'
+
+  - source_table: 'roles'
+    target_table: 'role'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'id'
+
+  - source_table: 'user_roles'
+    target_table: 'user_to_role'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'user_id, role_id'
+
+  - source_table: 'categories'
+    target_table: 'category'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'id'
+
+  - source_table: 'collections'
+    target_table: 'collection'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'id'
+
+  - source_table: 'modules'
+    target_table: 'module'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'id'
+
+  - source_table: 'notifications'
+    target_table: 'notification'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'created_at'
+
+  - source_table: 'audit_logs'
+    target_table: 'auditTrail'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'created_at'
+
+  - source_table: 'incidents'
+    target_table: 'incidentDetail'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'created_at'

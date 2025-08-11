@@ -1,0 +1,39 @@
+migration:
+  name: 'vertica-to-postgresql-migration'
+  description: 'Migrate data from Vertica to PostgreSQL with schema transformation'
+
+  source:
+    type: 'vertica'
+    host: 'localhost'
+    port: 5433
+    database: 'source_db'
+    username: '${VERTICA_USERNAME}'
+    password: '${VERTICA_PASSWORD}'
+    ssl: false
+    schema_path: 'schemas/source/vertica'
+    default_schema: 'public'
+
+  target:
+    type: 'postgresql'
+    host: 'localhost'
+    port: 5432
+    database: 'target_db'
+    username: '${POSTGRES_USERNAME}'
+    password: '${POSTGRES_PASSWORD}'
+    ssl: false
+    schema_path: 'schemas/target/postgresql'
+    default_schema: 'dpwtanbeeh'
+
+  mappings:
+    path: 'schemas/mappings/vertica-to-postgresql'
+
+  settings:
+    batch_size: 10000
+    parallel_workers: 4
+    validation_enabled: true
+    rollback_enabled: true
+    continue_on_error: false
+    max_retries: 3
+    retry_delay: 1000
+    log_level: 'info'
+    progress_reporting: true

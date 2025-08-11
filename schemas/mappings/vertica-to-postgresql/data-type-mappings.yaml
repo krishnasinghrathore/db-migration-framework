@@ -1,0 +1,158 @@
+type_mappings:
+  # Numeric Types
+  - vertica_type: 'INTEGER'
+    postgresql_type: 'INTEGER'
+    transformation: 'preserve'
+
+  - vertica_type: 'BIGINT'
+    postgresql_type: 'BIGINT'
+    transformation: 'preserve'
+
+  - vertica_type: 'SMALLINT'
+    postgresql_type: 'SMALLINT'
+    transformation: 'preserve'
+
+  - vertica_type: 'TINYINT'
+    postgresql_type: 'SMALLINT'
+    transformation: 'preserve'
+
+  - vertica_type: 'NUMERIC'
+    postgresql_type: 'DECIMAL'
+    transformation: 'preserve'
+    requires_precision: true
+    requires_scale: true
+
+  - vertica_type: 'DECIMAL'
+    postgresql_type: 'DECIMAL'
+    transformation: 'preserve'
+    requires_precision: true
+    requires_scale: true
+
+  - vertica_type: 'FLOAT'
+    postgresql_type: 'REAL'
+    transformation: 'preserve'
+
+  - vertica_type: 'DOUBLE PRECISION'
+    postgresql_type: 'DOUBLE PRECISION'
+    transformation: 'preserve'
+
+  - vertica_type: 'REAL'
+    postgresql_type: 'REAL'
+    transformation: 'preserve'
+
+  # Identity/Serial Types
+  - vertica_type: 'IDENTITY'
+    postgresql_type: 'BIGSERIAL'
+    transformation: 'identity_to_serial'
+
+  - vertica_type: 'AUTO_INCREMENT'
+    postgresql_type: 'BIGSERIAL'
+    transformation: 'identity_to_serial'
+
+  # String Types
+  - vertica_type: 'VARCHAR'
+    postgresql_type: 'VARCHAR'
+    transformation: 'preserve'
+    requires_length: true
+
+  - vertica_type: 'CHAR'
+    postgresql_type: 'CHAR'
+    transformation: 'preserve'
+    requires_length: true
+
+  - vertica_type: 'LONG VARCHAR'
+    postgresql_type: 'TEXT'
+    transformation: 'preserve'
+
+  - vertica_type: 'TEXT'
+    postgresql_type: 'TEXT'
+    transformation: 'preserve'
+
+  # Date/Time Types
+  - vertica_type: 'DATE'
+    postgresql_type: 'DATE'
+    transformation: 'preserve'
+
+  - vertica_type: 'TIME'
+    postgresql_type: 'TIME'
+    transformation: 'preserve'
+
+  - vertica_type: 'TIMESTAMP'
+    postgresql_type: 'TIMESTAMP'
+    transformation: 'preserve'
+
+  - vertica_type: 'TIMESTAMPTZ'
+    postgresql_type: 'TIMESTAMP WITH TIME ZONE'
+    transformation: 'preserve'
+
+  - vertica_type: 'TIMESTAMP WITH TIMEZONE'
+    postgresql_type: 'TIMESTAMP WITH TIME ZONE'
+    transformation: 'preserve'
+
+  - vertica_type: 'INTERVAL'
+    postgresql_type: 'INTERVAL'
+    transformation: 'preserve'
+
+  # Boolean Type
+  - vertica_type: 'BOOLEAN'
+    postgresql_type: 'BOOLEAN'
+    transformation: 'preserve'
+
+  - vertica_type: 'BOOL'
+    postgresql_type: 'BOOLEAN'
+    transformation: 'preserve'
+
+  # Binary Types
+  - vertica_type: 'BINARY'
+    postgresql_type: 'BYTEA'
+    transformation: 'binary_to_bytea'
+
+  - vertica_type: 'VARBINARY'
+    postgresql_type: 'BYTEA'
+    transformation: 'binary_to_bytea'
+
+  - vertica_type: 'LONG VARBINARY'
+    postgresql_type: 'BYTEA'
+    transformation: 'binary_to_bytea'
+
+  - vertica_type: 'RAW'
+    postgresql_type: 'BYTEA'
+    transformation: 'binary_to_bytea'
+
+  # UUID Type
+  - vertica_type: 'UUID'
+    postgresql_type: 'UUID'
+    transformation: 'preserve'
+
+  # JSON Types (if supported in newer Vertica versions)
+  - vertica_type: 'JSON'
+    postgresql_type: 'JSON'
+    transformation: 'preserve'
+
+  - vertica_type: 'JSONB'
+    postgresql_type: 'JSONB'
+    transformation: 'preserve'
+
+  # Array Types (if supported)
+  - vertica_type: 'ARRAY'
+    postgresql_type: 'ARRAY'
+    transformation: 'preserve'
+
+  # Geometry Types (if using spatial extensions)
+  - vertica_type: 'GEOMETRY'
+    postgresql_type: 'GEOMETRY'
+    transformation: 'preserve'
+
+  - vertica_type: 'GEOGRAPHY'
+    postgresql_type: 'GEOGRAPHY'
+    transformation: 'preserve'
+
+  # Special Vertica Types
+  - vertica_type: 'MONEY'
+    postgresql_type: 'MONEY'
+    transformation: 'preserve'
+
+  # Default fallback for unknown types
+  - vertica_type: 'UNKNOWN'
+    postgresql_type: 'TEXT'
+    transformation: 'to_text'
