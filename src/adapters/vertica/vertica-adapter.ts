@@ -427,40 +427,56 @@ export class VerticaAdapter extends DatabaseAdapter {
   }
 
   async getRowCount(tableName: string, schema: string = 'public'): Promise<number> {
-    const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
-    const query = `SELECT COUNT(*) as count FROM ${fullTableName}`;
+    console.log(`🔍 [getRowCount] Starting - table: ${tableName}, schema: ${schema}`);
 
-    console.log(`🔍 Executing count query: ${query}`);
-    const result = await this.executeQuery(query);
-    console.log(`🔍 Query result:`, JSON.stringify(result, null, 2));
+    try {
+      const fullTableName = this.escapeIdentifier(schema) + '.' + this.escapeIdentifier(tableName);
+      const query = `SELECT COUNT(*) as count FROM ${fullTableName}`;
 
-    if (!result.rows || result.rows.length === 0) {
-      console.warn('⚠️  No rows returned from count query');
+      console.log(`🔍 [getRowCount] Executing count query: ${query}`);
+      console.log(`🔍 [getRowCount] Connection status: ${this.isConnected}`);
+      console.log(`🔍 [getRowCount] Connection object:`, !!this.connection);
+
+      const result = await this.executeQuery(query);
+      console.log(`🔍 [getRowCount] Query result:`, JSON.stringify(result, null, 2));
+
+      if (!result.rows || result.rows.length === 0) {
+        console.warn('⚠️  [getRowCount] No rows returned from count query');
+        return 0;
+      }
+
+      const firstRow = result.rows[0];
+      console.log(`🔍 [getRowCount] First row:`, JSON.stringify(firstRow, null, 2));
+      console.log(`🔍 [getRowCount] Available keys:`, Object.keys(firstRow || {}));
+
+      // Try different possible column names
+      const count =
+        firstRow?.count || firstRow?.COUNT || firstRow?.Count || firstRow?.['COUNT(*)'] || firstRow?.['count(*)'];
+
+      console.log(`🔍 [getRowCount] Extracted count value:`, count, `(type: ${typeof count})`);
+
+      // Handle different return types from Vertica driver
+      if (typeof count === 'number') {
+        console.log(`✅ [getRowCount] Returning number: ${count}`);
+        return count;
+      } else if (typeof count === 'string') {
+        const parsed = parseInt(count, 10);
+        const result = isNaN(parsed) ? 0 : parsed;
+        console.log(`✅ [getRowCount] Returning parsed string: ${result}`);
+        return result;
+      } else if (typeof count === 'bigint') {
+        const result = Number(count);
+        console.log(`✅ [getRowCount] Returning bigint as number: ${result}`);
+        return result;
+      }
+
+      console.warn('⚠️  [getRowCount] Unexpected count type:', typeof count, count);
+      return 0;
+    } catch (error) {
+      console.error('❌ [getRowCount] Exception occurred:', error);
+      console.error('❌ [getRowCount] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       return 0;
     }
-
-    const firstRow = result.rows[0];
-    console.log(`🔍 First row:`, JSON.stringify(firstRow, null, 2));
-    console.log(`🔍 Available keys:`, Object.keys(firstRow || {}));
-
-    // Try different possible column names
-    const count =
-      firstRow?.count || firstRow?.COUNT || firstRow?.Count || firstRow?.['COUNT(*)'] || firstRow?.['count(*)'];
-
-    console.log(`🔍 Extracted count value:`, count, `(type: ${typeof count})`);
-
-    // Handle different return types from Vertica driver
-    if (typeof count === 'number') {
-      return count;
-    } else if (typeof count === 'string') {
-      const parsed = parseInt(count, 10);
-      return isNaN(parsed) ? 0 : parsed;
-    } else if (typeof count === 'bigint') {
-      return Number(count);
-    }
-
-    console.warn('⚠️  Unexpected count type:', typeof count, count);
-    return 0;
   }
 
   getDataTypeMapping(): DataTypeMapping[] {
