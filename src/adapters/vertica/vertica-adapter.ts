@@ -49,11 +49,11 @@ try {
 
           // Mock responses for common queries
           setTimeout(() => {
-            if (sql.includes('COUNT(*)')) {
+            if (sql.includes('SELECT 1 as test')) {
+              cb(null, { rows: [{ test: 1 }], rowCount: 1 });
+            } else if (sql.includes('COUNT(*)')) {
               console.log('⚠️  MOCK COUNT - Using sample count of 1000');
               cb(null, { rows: [{ count: '1000' }], rowCount: 1 });
-            } else if (sql.includes('SELECT 1')) {
-              cb(null, { rows: [{ test: 1 }], rowCount: 1 });
             } else if (sql.includes('SELECT *')) {
               // Mock table data
               console.log('⚠️  MOCK SELECT - Using sample data instead of real Vertica data!');
