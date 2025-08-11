@@ -204,7 +204,23 @@ async function migrateTable(
               newRow[targetCol] = value;
             }
           } else {
-            newRow[targetCol] = null;
+            // Handle null values for timestamp columns with NOT NULL constraints
+            if ((targetCol === 'updated_at' || targetCol === 'modified_date') && targetColumnNames.has('created_at')) {
+              // For updated_at columns, use created_at as fallback if available, otherwise use current timestamp
+              const createdAtValue =
+                row[columnMapping['CREATED_DATE'] || 'CREATED_DATE'] || row['CREATED_DATE'] || row['created_date'];
+              if (createdAtValue !== null && createdAtValue !== undefined) {
+                newRow[targetCol] =
+                  createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string | number);
+              } else {
+                newRow[targetCol] = new Date();
+              }
+            } else if (targetCol === 'updated_at' || targetCol.includes('_at')) {
+              // For other timestamp columns with NOT NULL constraints, use current timestamp as fallback
+              newRow[targetCol] = new Date();
+            } else {
+              newRow[targetCol] = null;
+            }
           }
         }
 
