@@ -1,14 +1,19 @@
 // Dynamic loading of PostgreSQL driver
-function getPostgreSQLPool() {
+let pgPoolClass: any = null;
+
+// Use dynamic import for ESM compatibility
+async function getPostgreSQLPool() {
+  if (pgPoolClass !== null) return pgPoolClass;
   try {
-    const pg = require('pg');
+    const pg = (await import('pg')).default || (await import('pg'));
     console.log('✅ PostgreSQL driver loaded successfully');
-    return pg.Pool;
+    pgPoolClass = pg.Pool;
+    return pgPoolClass;
   } catch (error) {
     console.warn('⚠️  PostgreSQL driver not available, using mock implementation');
     console.warn('⚠️  Install pg package: npm install pg');
     console.warn('⚠️  No actual data will be inserted into PostgreSQL!');
-    return class MockPool {
+    pgPoolClass = class MockPool {
       constructor(config: any) {
         console.log('🔧 Mock PostgreSQL connection - using sample responses');
         console.log('🔧 Connection config:', {
@@ -40,6 +45,7 @@ function getPostgreSQLPool() {
         console.log('🔌 Mock PostgreSQL pool ended');
       }
     };
+    return pgPoolClass;
   }
 }
 
@@ -70,7 +76,8 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
 
   async connect(): Promise<void> {
     try {
-      this.pool = new (getPostgreSQLPool())({
+      const PoolClass = await getPostgreSQLPool();
+      this.pool = new PoolClass({
         host: this.config.host,
         port: this.config.port,
         database: this.config.database,

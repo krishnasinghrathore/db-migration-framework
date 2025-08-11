@@ -12,67 +12,73 @@ import {
 } from '../base/database-adapter.js';
 
 // Try to import vertica package, fall back to mock if not available
-let vertica: any;
-try {
-  vertica = require('vertica');
-  console.log('✅ Vertica driver loaded successfully');
-} catch (error) {
-  console.warn('⚠️  Vertica driver not available, using mock implementation');
-  console.warn('⚠️  Install vertica package: npm install vertica');
-  console.warn('⚠️  Mock data will be used instead of real Vertica data!');
+let vertica: any = null;
 
-  // Mock implementation for development/testing
-  vertica = {
-    connect: (config: any, callback: (err: any, connection?: any) => void) => {
-      console.log('🔧 Mock Vertica connection - using sample data');
-      console.log('🔧 Connection config:', {
-        host: config.host,
-        port: config.port,
-        database: config.database,
-        user: config.user,
-      });
-      const mockConnection = {
-        connect: (cb: (err: any) => void) => {
-          setTimeout(() => cb(null), 100);
-        },
-        disconnect: () => {
-          console.log('🔌 Mock Vertica disconnected');
-        },
-        query: (sql: string, paramsOrCallback?: any, callback?: any) => {
-          const cb = typeof paramsOrCallback === 'function' ? paramsOrCallback : callback;
-          const params = typeof paramsOrCallback === 'function' ? [] : paramsOrCallback;
+// Use dynamic import for ESM compatibility
+async function loadVertica() {
+  if (vertica !== null) return vertica;
+  try {
+    vertica = (await import('vertica')).default || (await import('vertica'));
+    console.log('✅ Vertica driver loaded successfully');
+    return vertica;
+  } catch (error) {
+    console.warn('⚠️  Vertica driver not available, using mock implementation');
+    console.warn('⚠️  Install vertica package: npm install vertica');
+    console.warn('⚠️  Mock data will be used instead of real Vertica data!');
+    // Mock implementation for development/testing
+    vertica = {
+      connect: (config: any, callback: (err: any, connection?: any) => void) => {
+        console.log('🔧 Mock Vertica connection - using sample data');
+        console.log('🔧 Connection config:', {
+          host: config.host,
+          port: config.port,
+          database: config.database,
+          user: config.user,
+        });
+        const mockConnection = {
+          connect: (cb: (err: any) => void) => {
+            setTimeout(() => cb(null), 100);
+          },
+          disconnect: () => {
+            console.log('🔌 Mock Vertica disconnected');
+          },
+          query: (sql: string, paramsOrCallback?: any, callback?: any) => {
+            const cb = typeof paramsOrCallback === 'function' ? paramsOrCallback : callback;
+            const params = typeof paramsOrCallback === 'function' ? [] : paramsOrCallback;
 
-          console.log(`🔍 Mock Vertica query: ${sql.substring(0, 50)}...`);
-          if (params && params.length > 0) {
-            console.log(`🔍 Mock Vertica params:`, params.slice(0, 3));
-          }
-
-          // Mock responses for common queries
-          setTimeout(() => {
-            if (sql.includes('SELECT 1 as test')) {
-              cb(null, { rows: [{ test: 1 }], rowCount: 1 });
-            } else if (sql.includes('COUNT(*)')) {
-              console.log('⚠️  MOCK COUNT - Using sample count of 1000');
-              cb(null, { rows: [{ count: '1000' }], rowCount: 1 });
-            } else if (sql.includes('SELECT *')) {
-              // Mock table data
-              console.log('⚠️  MOCK SELECT - Using sample data instead of real Vertica data!');
-              const mockData = Array.from({ length: 10 }, (_, i) => ({
-                id: i + 1,
-                name: `Sample Record ${i + 1}`,
-                created_date: new Date(),
-                is_valid: 1,
-              }));
-              cb(null, { rows: mockData, rowCount: mockData.length });
-            } else {
-              cb(null, { rows: [], rowCount: 0 });
+            console.log(`🔍 Mock Vertica query: ${sql.substring(0, 50)}...`);
+            if (params && params.length > 0) {
+              console.log(`🔍 Mock Vertica params:`, params.slice(0, 3));
             }
-          }, 50);
-        },
-      };
-      callback(null, mockConnection);
-    },
-  };
+
+            // Mock responses for common queries
+            setTimeout(() => {
+              if (sql.includes('SELECT 1 as test')) {
+                cb(null, { rows: [{ test: 1 }], rowCount: 1 });
+              } else if (sql.includes('COUNT(*)')) {
+                console.log('⚠️  MOCK COUNT - Using sample count of 1000');
+                cb(null, { rows: [{ count: '1000' }], rowCount: 1 });
+              } else if (sql.includes('SELECT *')) {
+                // Mock table data
+                console.log('⚠️  MOCK SELECT - Using sample data instead of real Vertica data!');
+                const mockData = Array.from({ length: 10 }, (_, i) => ({
+                  id: i + 1,
+                  name: `Sample Record ${i + 1}`,
+                  created_date: new Date(),
+                  is_valid: 1,
+                }));
+                cb(null, { rows: mockData, rowCount: mockData.length });
+              } else {
+                cb(null, { rows: [], rowCount: 0 });
+              }
+            }, 50);
+          },
+        };
+        callback(null, mockConnection);
+      },
+    };
+    return vertica;
+  }
 }
 
 interface VerticaConnection {
@@ -90,6 +96,7 @@ export class VerticaAdapter extends DatabaseAdapter {
   }
 
   async connect(): Promise<void> {
+    const verticaDriver = await loadVertica();
     return new Promise((resolve, reject) => {
       const connectionConfig = {
         host: this.config.host,
@@ -102,7 +109,7 @@ export class VerticaAdapter extends DatabaseAdapter {
         queryTimeout: this.config.queryTimeout || 60000,
       };
 
-      vertica.connect(connectionConfig, (err: any, connection: any) => {
+      verticaDriver.connect(connectionConfig, (err: any, connection: any) => {
         if (err) {
           this.emitError(err);
           reject(err);
