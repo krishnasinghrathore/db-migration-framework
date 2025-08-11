@@ -151,7 +151,7 @@ CREATE TABLE DPWTANBEEH.MODULES
 (
     MOD_REC_ID int NOT NULL,
     SHORT_CODE varchar(30) NOT NULL,
-    SERVICE_ID varchar(30) NOT NULL,
+    --SERVICE_ID varchar(30) NOT NULL,
     NAME varchar(30) NOT NULL,
     DESCRIPTION varchar(255),
     TRITON_MODEL_NAME varchar(255),

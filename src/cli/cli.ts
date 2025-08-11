@@ -104,7 +104,6 @@ const COLUMN_MAPPINGS: { [key: string]: { [key: string]: string } } = {
   MODULES: {
     MOD_REC_ID: 'id',
     SHORT_CODE: 'code',
-    SERVICE_ID: 'service_id',
     NAME: 'name',
     DESCRIPTION: 'description',
     TRITON_MODEL_NAME: 'triton_model_name',
