@@ -62,7 +62,7 @@ db-migration-framework/
 1. **Clone the repository**:
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/krishnasinghrathore/db-migration-framework.git
    cd db-migration-framework
    ```
 
