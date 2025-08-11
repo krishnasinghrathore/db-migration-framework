@@ -1,59 +1,9 @@
 #!/usr/bin/env node
 
-// Note: Install commander package: npm install commander @types/node
-// import { Command } from 'commander';
+import { Command } from 'commander';
 import { ConfigManager } from '../core/config-manager.js';
 import { VerticaAdapter } from '../adapters/vertica/vertica-adapter.js';
 import { PostgreSQLAdapter } from '../adapters/postgresql/postgresql-adapter.js';
-
-// Temporary Command placeholder until commander is installed
-const Command = class {
-  constructor() {}
-  name(n: string) {
-    return this;
-  }
-  description(d: string) {
-    return this;
-  }
-  version(v: string) {
-    return this;
-  }
-  command(c: string) {
-    return this;
-  }
-  option(o: string, d?: string, def?: string) {
-    return this;
-  }
-  requiredOption(o: string, d: string) {
-    return this;
-  }
-  action(fn: Function) {
-    return this;
-  }
-  parse() {}
-} as any;
-
-// Mock console for Node.js environment
-const console = {
-  log: (...args: any[]) => {
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(args.join(' ') + '\n');
-    }
-  },
-  error: (...args: any[]) => {
-    if (typeof process !== 'undefined' && process.stderr) {
-      process.stderr.write(args.join(' ') + '\n');
-    }
-  },
-};
-
-// Mock process for environment
-const process = {
-  env: {} as { [key: string]: string | undefined },
-  exit: (code: number) => {
-    throw new Error(`Process exit with code ${code}`);
-  },
-};
 
 const program = new Command();
 
@@ -196,7 +146,7 @@ async function migrateTable(
             }
             // Convert timestamps
             else if (targetCol.includes('_at') || targetCol.includes('_date')) {
-              newRow[targetCol] = value instanceof Date ? value : new Date(value);
+              newRow[targetCol] = value instanceof Date ? value : new Date(value as string | number);
             }
             // Convert streaming boolean
             else if (targetCol === 'streaming' && typeof value === 'number') {
@@ -282,16 +232,16 @@ program
         host: config.migration.source.host || 'localhost',
         port: config.migration.source.port || 5433,
         database: config.migration.source.database || 'vertica_db',
-        username: process.env.VERTICA_USERNAME || config.migration.source.username || '',
-        password: process.env.VERTICA_PASSWORD || config.migration.source.password || '',
+        username: process.env['VERTICA_USERNAME'] || config.migration.source.username || '',
+        password: process.env['VERTICA_PASSWORD'] || config.migration.source.password || '',
       });
 
       const targetAdapter = new PostgreSQLAdapter({
         host: config.migration.target.host || 'localhost',
         port: config.migration.target.port || 5432,
         database: config.migration.target.database || 'postgres_db',
-        username: process.env.POSTGRES_USERNAME || config.migration.target.username || '',
-        password: process.env.POSTGRES_PASSWORD || config.migration.target.password || '',
+        username: process.env['POSTGRES_USERNAME'] || config.migration.target.username || '',
+        password: process.env['POSTGRES_PASSWORD'] || config.migration.target.password || '',
       });
 
       // Connect to databases
@@ -303,7 +253,7 @@ program
       // Migrate table
       await migrateTable(sourceAdapter, targetAdapter, sourceTable, targetTable, {
         ...options,
-        batchSize: parseInt(options.batchSize || '1000'),
+        batchSize: parseInt(String(options.batchSize || '1000')),
       });
 
       // Disconnect
@@ -337,16 +287,16 @@ program
         host: config.migration.source.host || 'localhost',
         port: config.migration.source.port || 5433,
         database: config.migration.source.database || 'vertica_db',
-        username: process.env.VERTICA_USERNAME || config.migration.source.username || '',
-        password: process.env.VERTICA_PASSWORD || config.migration.source.password || '',
+        username: process.env['VERTICA_USERNAME'] || config.migration.source.username || '',
+        password: process.env['VERTICA_PASSWORD'] || config.migration.source.password || '',
       });
 
       const targetAdapter = new PostgreSQLAdapter({
         host: config.migration.target.host || 'localhost',
         port: config.migration.target.port || 5432,
         database: config.migration.target.database || 'postgres_db',
-        username: process.env.POSTGRES_USERNAME || config.migration.target.username || '',
-        password: process.env.POSTGRES_PASSWORD || config.migration.target.password || '',
+        username: process.env['POSTGRES_USERNAME'] || config.migration.target.username || '',
+        password: process.env['POSTGRES_PASSWORD'] || config.migration.target.password || '',
       });
 
       // Connect to databases
@@ -364,7 +314,7 @@ program
         try {
           await migrateTable(sourceAdapter, targetAdapter, sourceTable, targetTable, {
             ...options,
-            batchSize: parseInt(options.batchSize || '1000'),
+            batchSize: parseInt(String(options.batchSize || '1000')),
           });
           successCount++;
         } catch (error) {
@@ -420,8 +370,8 @@ program
         host: config.migration.source.host || 'localhost',
         port: config.migration.source.port || 5433,
         database: config.migration.source.database || 'vertica_db',
-        username: process.env.VERTICA_USERNAME || config.migration.source.username || '',
-        password: process.env.VERTICA_PASSWORD || config.migration.source.password || '',
+        username: process.env['VERTICA_USERNAME'] || config.migration.source.username || '',
+        password: process.env['VERTICA_PASSWORD'] || config.migration.source.password || '',
       });
 
       const sourceConnected = await sourceAdapter.testConnection();
@@ -437,8 +387,8 @@ program
         host: config.migration.target.host || 'localhost',
         port: config.migration.target.port || 5432,
         database: config.migration.target.database || 'postgres_db',
-        username: process.env.POSTGRES_USERNAME || config.migration.target.username || '',
-        password: process.env.POSTGRES_PASSWORD || config.migration.target.password || '',
+        username: process.env['POSTGRES_USERNAME'] || config.migration.target.username || '',
+        password: process.env['POSTGRES_PASSWORD'] || config.migration.target.password || '',
       });
 
       const targetConnected = await targetAdapter.testConnection();
