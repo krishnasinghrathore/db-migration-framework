@@ -37,10 +37,10 @@ tables:
     order_by: 'id'
 
   - source_table: 'modules'
-    target_table: 'module'
+    target_table: 'modules'
     target_schema: 'dpwtanbeeh'
     enabled: true
-    order_by: 'id'
+    order_by: 'MOD_REC_ID'
 
   - source_table: 'notifications'
     target_table: 'notification'
