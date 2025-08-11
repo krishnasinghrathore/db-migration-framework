@@ -449,28 +449,45 @@ export class VerticaAdapter extends DatabaseAdapter {
       console.log(`🔍 [getRowCount] First row:`, JSON.stringify(firstRow, null, 2));
       console.log(`🔍 [getRowCount] Available keys:`, Object.keys(firstRow || {}));
 
-      // Try different possible column names
-      const count =
-        firstRow?.count || firstRow?.COUNT || firstRow?.Count || firstRow?.['COUNT(*)'] || firstRow?.['count(*)'];
+      // Extract count value from the first column
+      if (!firstRow || typeof firstRow !== 'object') {
+        console.warn('⚠️  [getRowCount] Invalid row structure returned from count query');
+        return 0;
+      }
 
-      console.log(`🔍 [getRowCount] Extracted count value:`, count, `(type: ${typeof count})`);
+      const keys = Object.keys(firstRow);
+      if (keys.length === 0) {
+        console.warn('⚠️  [getRowCount] No columns returned from count query');
+        return 0;
+      }
+
+      const countKey = keys[0];
+      const countValue = firstRow[countKey as keyof typeof firstRow];
+      console.log(
+        `🔍 [getRowCount] Extracted count value from key '${countKey}':`,
+        countValue,
+        `(type: ${typeof countValue})`
+      );
 
       // Handle different return types from Vertica driver
-      if (typeof count === 'number') {
-        console.log(`✅ [getRowCount] Returning number: ${count}`);
-        return count;
-      } else if (typeof count === 'string') {
-        const parsed = parseInt(count, 10);
+      if (typeof countValue === 'number') {
+        console.log(`✅ [getRowCount] Returning number: ${countValue}`);
+        return countValue;
+      } else if (typeof countValue === 'string') {
+        const parsed = parseInt(countValue, 10);
         const result = isNaN(parsed) ? 0 : parsed;
         console.log(`✅ [getRowCount] Returning parsed string: ${result}`);
         return result;
-      } else if (typeof count === 'bigint') {
-        const result = Number(count);
+      } else if (typeof countValue === 'bigint') {
+        const result = Number(countValue);
         console.log(`✅ [getRowCount] Returning bigint as number: ${result}`);
         return result;
+      } else if (countValue === undefined || countValue === null) {
+        console.warn('⚠️  [getRowCount] Count value is undefined or null');
+        return 0;
       }
 
-      console.warn('⚠️  [getRowCount] Unexpected count type:', typeof count, count);
+      console.warn('⚠️  [getRowCount] Unexpected count type:', typeof countValue, countValue);
       return 0;
     } catch (error) {
       console.error('❌ [getRowCount] Exception occurred:', error);
