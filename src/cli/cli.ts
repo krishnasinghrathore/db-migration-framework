@@ -138,6 +138,14 @@ const COLUMN_MAPPINGS: { [key: string]: { [key: string]: string } } = {
     MODIFIED_BY: 'modified_by',
     MODIFIED_DATE: 'modified_date',
   },
+  CAMERA_MODULE_MAP: {
+    CAM_REC_ID: 'camera_id',
+    MOD_REC_ID: 'module_id',
+  },
+  CAMERA_COLLECTION_MAP: {
+    CAM_REC_ID: 'camera_id',
+    COLLECTION_ID: 'collection_id',
+  },
 };
 // Helper function to sort categories hierarchically (parents before children)
 function sortCategoriesHierarchically(categories: any[]): any[] {
