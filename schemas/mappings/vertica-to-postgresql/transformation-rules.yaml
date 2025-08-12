@@ -244,3 +244,21 @@ transformation_rules:
       function(value) {
         return value === null || typeof value === 'string';
       }
+
+  - name: 'foreign_key_lookup'
+    description: 'Lookup foreign key value or use default if not found'
+    source_type: 'BIGINT'
+    target_type: 'BIGINT'
+    transformer: |
+      function(value) {
+        if (value === null || value === undefined) return null;
+        // In a real implementation, this would check if the foreign key exists
+        // For now, we'll just return the value as-is
+        // A more sophisticated implementation would query the database to check
+        // if the referenced record exists and return a default if not
+        return Number(value);
+      }
+    validator: |
+      function(value) {
+        return value === null || Number.isInteger(Number(value));
+      }

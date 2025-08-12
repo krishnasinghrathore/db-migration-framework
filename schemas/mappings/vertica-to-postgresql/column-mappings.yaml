@@ -61,7 +61,7 @@ column_mappings:
       transformation: 'integer_preserve'
     - source_column: 'CATEGORY_ID'
       target_column: 'category_id'
-      transformation: 'bigint_preserve'
+      transformation: 'foreign_key_lookup'
     - source_column: 'IS_VALID'
       target_column: 'is_valid'
       transformation: 'integer_to_boolean'
