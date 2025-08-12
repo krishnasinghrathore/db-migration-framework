@@ -431,8 +431,31 @@ async function migrateTable(
         console.log(`🔍 Transformed data sample (first row):`, JSON.stringify(transformedData[0], null, 2));
         console.log(`🔍 Target table columns: ${Array.from(targetColumnNames).join(', ')}`);
 
+        // Deduplicate data for junction tables to avoid primary key violations
+        let finalData = transformedData;
+        if (sourceTable === 'CAMERA_MODULE_MAP' || sourceTable === 'CAMERA_COLLECTION_MAP') {
+          console.log(`🔍 Deduplicating ${transformedData.length} rows for junction table...`);
+
+          const seen = new Set();
+          finalData = transformedData.filter((row) => {
+            const key = `${row.camera_id}-${row.module_id || row.collection_id}`;
+            if (seen.has(key)) {
+              console.log(
+                `⚠️  Skipping duplicate: camera_id=${row.camera_id}, ${
+                  sourceTable === 'CAMERA_MODULE_MAP' ? 'module_id' : 'collection_id'
+                }=${row.module_id || row.collection_id}`
+              );
+              return false;
+            }
+            seen.add(key);
+            return true;
+          });
+
+          console.log(`✅ Deduplication complete: ${transformedData.length} -> ${finalData.length} rows`);
+        }
+
         // Insert batch into target
-        const result = await targetAdapter.insertBatch(targetTable, transformedData, 'dpwtanbeeh');
+        const result = await targetAdapter.insertBatch(targetTable, finalData, 'dpwtanbeeh');
 
         if (result.success) {
           migratedRows += result.processedRows;
