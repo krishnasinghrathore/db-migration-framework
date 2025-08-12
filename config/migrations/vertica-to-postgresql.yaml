@@ -28,8 +28,8 @@ migration:
     path: 'schemas/mappings/vertica-to-postgresql'
 
   settings:
-    batch_size: 10000
-    parallel_workers: 4
+    batch_size: 1
+    parallel_workers: 1
     validation_enabled: true
     rollback_enabled: true
     continue_on_error: true
