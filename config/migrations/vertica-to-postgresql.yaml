@@ -32,7 +32,7 @@ migration:
     parallel_workers: 4
     validation_enabled: true
     rollback_enabled: true
-    continue_on_error: false
+    continue_on_error: true
     max_retries: 3
     retry_delay: 1000
     log_level: 'info'
