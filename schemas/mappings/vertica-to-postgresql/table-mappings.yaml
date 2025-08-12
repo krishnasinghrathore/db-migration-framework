@@ -6,6 +6,12 @@ tables:
     where_clause: 'is_active = true'
     order_by: 'created_date'
 
+  - source_table: 'categories'
+    target_table: 'category'
+    target_schema: 'dpwtanbeeh'
+    enabled: true
+    order_by: 'id'
+
   - source_table: 'cameras'
     target_table: 'cameras'
     target_schema: 'dpwtanbeeh'
@@ -23,12 +29,6 @@ tables:
     target_schema: 'dpwtanbeeh'
     enabled: true
     order_by: 'user_id, role_id'
-
-  - source_table: 'categories'
-    target_table: 'category'
-    target_schema: 'dpwtanbeeh'
-    enabled: true
-    order_by: 'id'
 
   - source_table: 'collections'
     target_table: 'collection'
