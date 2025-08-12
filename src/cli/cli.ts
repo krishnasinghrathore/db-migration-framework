@@ -217,7 +217,15 @@ async function migrateCategoryTable(
         else if (targetCol === 'streaming' && typeof value === 'number') {
           newRow[targetCol] = value === 1;
         } else {
-          newRow[targetCol] = value;
+          // Check if there's a transformation rule for this column in the YAML files
+          if (sourceTable === 'CATEGORY' && sourceCol === 'SHORT_CODE' && targetCol === 'code') {
+            // Apply varchar_truncate transformation for CATEGORY.SHORT_CODE -> code
+            const strValue = String(value).trim();
+            const maxLength = 10; // VARCHAR(10) constraint
+            newRow[targetCol] = strValue.length > maxLength ? strValue.substring(0, maxLength) : strValue;
+          } else {
+            newRow[targetCol] = value;
+          }
         }
       } else {
         // Handle null values for timestamp columns with NOT NULL constraints
@@ -367,7 +375,15 @@ async function migrateTable(
               else if (targetCol === 'streaming' && typeof value === 'number') {
                 newRow[targetCol] = value === 1;
               } else {
-                newRow[targetCol] = value;
+                // Check if there's a transformation rule for this column in the YAML files
+                if (sourceTable === 'CATEGORY' && sourceCol === 'SHORT_CODE' && targetCol === 'code') {
+                  // Apply varchar_truncate transformation for CATEGORY.SHORT_CODE -> code
+                  const strValue = String(value).trim();
+                  const maxLength = 10; // VARCHAR(10) constraint
+                  newRow[targetCol] = strValue.length > maxLength ? strValue.substring(0, maxLength) : strValue;
+                } else {
+                  newRow[targetCol] = value;
+                }
               }
             } else {
               // Handle null values for timestamp columns with NOT NULL constraints
