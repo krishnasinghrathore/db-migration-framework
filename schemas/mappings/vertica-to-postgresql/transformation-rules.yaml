@@ -229,3 +229,18 @@ transformation_rules:
         if (value === null) return true;
         return typeof value === 'string' && /^\d{2}:\d{2}:\d{2}/.test(value);
       }
+
+  - name: 'varchar_truncate'
+    description: 'Truncate VARCHAR values to fit within the specified length'
+    source_type: 'VARCHAR'
+    target_type: 'VARCHAR'
+    transformer: |
+      function(value, maxLength = 10) {
+        if (value === null || value === undefined) return null;
+        const strValue = String(value).trim();
+        return strValue.length > maxLength ? strValue.substring(0, maxLength) : strValue;
+      }
+    validator: |
+      function(value) {
+        return value === null || typeof value === 'string';
+      }
