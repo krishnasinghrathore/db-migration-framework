@@ -202,7 +202,9 @@ async function migrateCategoryTable(
 
     for (const [sourceCol, value] of Object.entries(row)) {
       const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
-      console.log(`🔍 Processing column: ${sourceCol} -> ${targetCol}`);
+      console.log(
+        `🔍 Processing column: ${sourceCol} -> ${targetCol} (mapping: ${columnMapping[sourceCol] || 'NOT_FOUND'})`
+      );
 
       // Skip columns that don't exist in the target table
       if (!targetColumnNames.has(targetCol)) {
@@ -360,7 +362,9 @@ async function migrateTable(
 
           for (const [sourceCol, value] of Object.entries(row)) {
             const targetCol = columnMapping[sourceCol] || sourceCol.toLowerCase();
-            console.log(`🔍 Processing column: ${sourceCol} -> ${targetCol}`);
+            console.log(
+              `🔍 Processing column: ${sourceCol} -> ${targetCol} (mapping: ${columnMapping[sourceCol] || 'NOT_FOUND'})`
+            );
 
             // Skip columns that don't exist in the target table
             if (!targetColumnNames.has(targetCol)) {
